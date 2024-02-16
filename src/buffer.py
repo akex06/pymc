@@ -7,9 +7,9 @@ from .types import VarInt, String, UShort, Long, Data, UUID, ByteArray
 from uuid import UUID as _UUID
 
 
-class Buffer:
-    def __init__(self, data: bytes = b""):
-        self.buffer = BytesIO(data)
+class Buffer(BytesIO):
+    def __init__(self, initial_bytes: bytes = b""):
+        super().__init__(initial_bytes)
         self.mapper: dict[Type[Struct], Callable] = {
             VarInt: self.unpack_varint,
             String: self.unpack_string,
@@ -21,43 +21,43 @@ class Buffer:
         }
 
     def pack_varint(self, val: int) -> None:
-        self.buffer.write(VarInt.pack(val))
+        self.write(VarInt.pack(val))
 
     def unpack_varint(self) -> int:
-        return VarInt.unpack(self.buffer)
+        return VarInt.unpack(self)
 
     def pack_string(self, s: str) -> None:
-        self.buffer.write(String.pack(s))
+        self.write(String.pack(s))
 
     def unpack_string(self) -> str:
-        return String.unpack(self.buffer)
+        return String.unpack(self)
 
     def pack_ushort(self, val: int) -> None:
-        self.buffer.write(UShort.pack(val))
+        self.write(UShort.pack(val))
 
     def unpack_ushort(self) -> int:
-        return UShort.unpack(self.buffer)
+        return UShort.unpack(self)
 
     def pack_long(self, val: int) -> None:
-        self.buffer.write(Long.pack(val))
+        self.write(Long.pack(val))
 
     def unpack_long(self) -> int:
-        return Long.unpack(self.buffer)
+        return Long.unpack(self)
 
     def pack_data(self, data: bytes) -> None:
-        self.buffer.write(data)
+        self.write(data)
 
     def unpack_data(self) -> bytes:
-        return Data.unpack(self.buffer)
+        return Data.unpack(self)
 
     def pack_bytearray(self, data: bytes) -> None:
-        self.buffer.write(VarInt.pack(len(data)) + data)
+        self.write(VarInt.pack(len(data)) + data)
 
     def unpack_bytearray(self) -> bytes:
-        return ByteArray.unpack(self.buffer)
+        return ByteArray.unpack(self)
 
     def pack_uuid(self, uuid: _UUID) -> None:
-        self.buffer.write(UUID.pack(uuid))
+        self.write(UUID.pack(uuid))
 
     def unpack_uuid(self) -> _UUID:
-        return UUID.unpack(self.buffer)
+        return UUID.unpack(self)

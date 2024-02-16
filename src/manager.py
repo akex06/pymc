@@ -1,4 +1,5 @@
 import abc
+import base64
 import json
 from dataclasses import dataclass
 from struct import Struct
@@ -15,11 +16,8 @@ class Manager(protocol.Protocol):
     def __init__(self) -> None:
         self.stage = HandShake(self)
 
-    def connectionMade(self) -> None:
-        print("Connection made")
-
     def dataReceived(self, data: bytes) -> None:
-        print("-------")
+        print("-----------------")
         print(data)
         self.stage.process(data)
 
@@ -50,10 +48,13 @@ class Stage(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def __init__(self, manager: Manager) -> None:
-        pass
+        self.manager = manager
 
     @abc.abstractmethod
     def process(self, data: bytes) -> None:
+        pass
+
+    def send_packet(self, buffer: Buffer) -> None:
         pass
 
 
@@ -94,7 +95,7 @@ class HandShake(Stage):
 
         func(self, *args)
 
-        extra_packet = buffer.buffer.read()
+        extra_packet = buffer.read()
         if extra_packet:
             self.manager.stage.process(extra_packet)
 
@@ -106,10 +107,13 @@ class HandShake(Stage):
             self.manager.stage = Login(self.manager)
 
 
+with open("server-icon.png", "rb") as f:
+    encoded_image = base64.b64encode(f.read())
+
 status_response = {
     "version": {
-        "name": "1.20.2",
-        "protocol": 764
+        "name": "1.20.4",
+        "protocol": 765
     },
     "players": {
         "max": 100,
@@ -124,7 +128,7 @@ status_response = {
     "description": {
         "text": "Hello world"
     },
-    # "favicon": "data:image/png;base64,<data>",
+    "favicon": f"data:image/png;base64,{encoded_image.decode()}",
     "enforcesSecureChat": True,
     "previewsChat": True
 }
@@ -166,29 +170,23 @@ class Login(Stage):
     listeners = dict()
     mapper = {
         0: (String, UUID),
-        1: (VarInt, ByteArray, VarInt, ByteArray)
+        1: (ByteArray,)
     }
 
     def __init__(self, manager: Manager) -> None:
         self.manager = manager
 
     def process(self, data: bytes) -> None:
-        print(11111111111111)
-        print(data)
         buffer = Buffer(data)
         packet_length = buffer.unpack_varint()
         packet_id = buffer.unpack_varint()
 
         func, field_types = self.listeners[packet_id]
         args = decode_args(buffer, self.mapper[packet_id])
-        print(func, field_types, args)
         return_packet = func(self, *args)
         if return_packet:
             self.manager.transport.write(return_packet)
 
     @listen(0)
     def on_login_start(self, name: str, uuid: UUID) -> Optional[None]:
-        print(name, uuid)
-        buffer = Buffer()
-        buffer.pack_string("")
-        buffer.pack_bytearray()
+        pass
